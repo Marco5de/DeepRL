@@ -13,19 +13,30 @@ class PPO(nn.Module):
 
 
     def evaluate_policy(self, observation: torch.Tensor):
+        """
+        Evaluates the actor policy network to generate an action
+        Is used for the on-policy algorithm
+
+        :param observation last observation that was observed from the env, used to evaluate pi(a|s)
+        :return: action sampled from the current policy
+        """
         # mean = NNactor(observation)
         # distribution = MultiGaussian(mean, covMat)
         # sample
         # logprobs
-        return None
+        # todo: for now return random action
+        return self.env.action_space.sample()
 
     def rollout_buffer(self, N: int, T: int):
         # todo: alle werte irgendwo speichern und dann wieder rausgeben
+
+        rollout_buffer = RolloutBuffer()
+
         for actor in range(N):
             observation = self.env.reset()
             for t in range(T):
                 # get action - implement action getter from current policy
-                action = self.env.action_space.sample()
+                action = self.eval_policy()
 
                 observation, action, done, info = self.env.step(action)
                 print(observation)
@@ -33,7 +44,16 @@ class PPO(nn.Module):
 
 
 
+class RolloutBuffer:
+    """
+    Implementation of a rollout buffer which is filled when sampling data from the environment in the PPO algorithm
+    """
 
+    def __init__(self):
+        # todo add missing values that must be tracked
+        self.actions = []
+        self.observations = []
+        self.rewards = []
 
 
 
