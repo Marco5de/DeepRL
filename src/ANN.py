@@ -34,11 +34,12 @@ class PolicyNetwork(nn.Module):
         self.hidden = nn.Linear(hidden_layer_widths[0], hidden_layer_widths[1])
         self.output = nn.Linear(hidden_layer_widths[1], output_dim)
 
-    def forward(self, t: torch.Tensor):
+    def forward(self, t: torch.Tensor, return_distribution:bool=False):
         """
         Implements the forward pass of the policy network
 
         :param t: input tensor
+        :param return_distribution if true the multivariate gaussian is also returned (see VF eval)
         :return: output sampled from the distribution outputted by the NN
         """
 
@@ -53,6 +54,9 @@ class PolicyNetwork(nn.Module):
 
         # get log prob for the sample, detach as graph is not required!
         log_prob = distribution.log_prob(sample).detach()
+
+        if return_distribution:
+            return sample, log_prob, distribution
 
         return sample, log_prob
 

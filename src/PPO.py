@@ -9,6 +9,7 @@ from src.ANN import PolicyNetwork, ValueFunctionNetwork
 class Hyperparameter:
     def __init__(self):
         self.epsilon_clip = 0.1  # todo find value
+        self.gamma = 0.95
 
 
 class PPO(nn.Module):
@@ -65,7 +66,7 @@ class PPO(nn.Module):
         """
         for i in range(K):
             value, log_probs = self.evaluate_value_function(observations,
-                                                            actions)  # todo does this value change in the loop?! computed earlier
+                                                            actions)  # this expression changes as the NN is updated!
 
             # todo compute ratio r_t(\theta) im paper
 
@@ -89,7 +90,7 @@ class PPO(nn.Module):
             value_function_net_loss.backward()
             self.value_func_network_optimizer.step()
 
-    def compute_advantage_values(self, value: torch.Tensor, rewards: torch.Tensor):
+    def compute_advantage_values(self, value: torch.Tensor, rewards: torch.Tensor, episode_lengths: torch.Tensor):
         """
         Paper specifies a couple of estimators are they equivalent?
         Implementations contain other, different estimators, which one to use?
@@ -98,6 +99,20 @@ class PPO(nn.Module):
         :param rewards:
         :return:
         """
+        # todo ich muss hier dann mal durch meine rewards durch
+        number_of_episodes = episode_lengths.size()
+
+        # todo: backwards ist einfach.. Berechnung ist mir noch nicht so ganz klar
+        idx_offset = 0
+        for episode_length in episode_lengths:
+            print("Episode length: ", episode_length)
+
+            for i in range(episode_lengths):
+                current_reward = rewards[idx_offset + i]
+
+
+            idx_offset += episode_length
+
         return None
 
     def evaluate_value_function(self, observations: torch.Tensor, actions: torch.Tensor):
@@ -108,9 +123,8 @@ class PPO(nn.Module):
         :return:
         """
         value = self.value_func_network(observations)
-
-        # todo hier ist die implementierung vom policy network doof, weil ich dierekt an die Verteilung muss... Läsug überlegen
-        log_probs = None
+        _, _, distribution = self.policy_network(observations)
+        log_probs = distribution.log_prob(actions)
 
         return value, log_probs
 
