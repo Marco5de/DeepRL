@@ -187,6 +187,7 @@ class PPO(nn.Module):
     def adaptive_KL_surrogate_function(self):
         """
         todo: implement
+        todo: clipping findet normal trotzdem noch statt!
         :return:
         """
         return 0
