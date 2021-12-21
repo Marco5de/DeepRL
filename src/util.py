@@ -7,7 +7,7 @@ def kullback_leibler_div(m1: torch.Tensor, s1: torch.Tensor, m2: torch.Tensor, s
      Implementation based on https://stanford.edu/~jduchi/projects/general_notes.pdf
 
      :param m1 mean of gaussian 1
-     :param s2 covariance matrix of gaussian 1
+     :param s1 covariance matrix of gaussian 1
      :param m2 mean of gaussian 2
      :param s2 covariance matrix of gaussian 2
      :return Kullback-leiber divergence beetween gaussian 1 and gaussian 2
