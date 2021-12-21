@@ -23,7 +23,7 @@ class PolicyNetwork(nn.Module):
 
         # todo for now fix to 2 hidden layers
         assert len(hidden_layer_widths) == 2
-        # todo: make sure that conv mat is flaot!
+        # todo: make sure that conv mat is float!
         assert covariance_mat is not None
 
         self.activation = activation
@@ -42,10 +42,8 @@ class PolicyNetwork(nn.Module):
         :param return_distribution if true the multivariate gaussian is also returned (see VF eval)
         :return: output sampled from the distribution outputted by the NN
         """
-
         t = self.activation(self.input(t))
         t = self.activation(self.hidden(t))
-        # todo: hier keine aktivierung mehr oder?
         t = self.output(t)
 
         # t are now the mean parameters, use that to create a multivariate gaussian to be sampled

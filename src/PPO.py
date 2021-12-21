@@ -1,6 +1,8 @@
+import sys
 import torch
 import torch.nn as nn
 import torch.optim
+import numpy as np
 import gym
 from typing import Tuple
 
@@ -20,6 +22,7 @@ class Hyperparameter:
         self.N = 10
         self.T = 10
         self.K = 5
+        self.numeric_stable = 1e-9
 
 
 class RolloutBuffer:
@@ -40,9 +43,9 @@ class RolloutBuffer:
 
         :return: actions, log_probabilities, observations, rewards, episode length as torch.Tensor
         """
-        tensor_actions = torch.tensor(self.actions)
+        tensor_actions = torch.stack(self.actions)
         tensor_log_probs = torch.tensor(self.log_probabilities)
-        tensor_observations = torch.tensor(self.observations)
+        tensor_observations = torch.tensor(np.stack(self.observations))
         tensor_rewards = torch.tensor(self.rewards)
         tensor_episode_length = torch.tensor(self.episode_length)
 
@@ -58,14 +61,23 @@ class PPO(nn.Module):
         self.env = gym.make(gym_name)
 
         self.render_env = render_env
+        if self.render_env:
+            self.env.render()
+
+        self.state_space_dim = len(self.env.robot.observation_space.high)
+        self.action_space_dim = len(self.env.robot.action_space.high)
+
+        self.action_space_lim = (self.env.robot.action_space.low, self.env.robot.action_space.high)
+        self.state_space_lim = (self.env.robot.observation_space.low, self.env.robot.observation_space.high)
+
+        print(f"Action space limits (low, high)= {self.action_space_lim}\nState space limits (low, high)= "
+              f"{self.state_space_lim}")
 
         self.surrogate_objective = surrogate_objective
         self.hyperparameter = Hyperparameter()
 
-        self.state_space_dim = self.env.observation_space.n
-        self.action_space_dim = self.env.action_space.n
-        # todo: macht es sinn, dass die covariance für alle dimensionen gleich ist?
-        self.cov_mat = torch.diag(torch.tensor([self.hyperparameter.var] * self.state_space_dim))
+        # covariance chosen the same for all dimension (assuming that the action space is normed!
+        self.cov_mat = torch.diag(torch.tensor([self.hyperparameter.var] * self.action_space_dim))
 
         self.policy_network = PolicyNetwork(input_dim=self.state_space_dim,
                                             output_dim=self.action_space_dim,
@@ -81,61 +93,71 @@ class PPO(nn.Module):
         :return:
         """
         # sample data - Run policy π_θ_old in environment for T time steps using N actors
-        rollout_buffer = self.sample_data(N=10, T=10)
+        rollout_buffer = self.sample_data(N=self.hyperparameter.N, T=self.hyperparameter.T)
         actions, log_probs, observations, rewards, episode_length = rollout_buffer.to_tensor()
 
         # compute advantage estimates A_1, \dots, A_T
         value, log_probs = self.evaluate_value_function(observations, actions)
-        # todo: trick to normalize advantage functions
-        advtange_values = self.compute_advantage_values(value, rewards)
+
+        rewards_togo = self.compute_rewards_togo(rewards, episode_length)
+        # graph of values is not required --> detach
+        value = value.detach()
+        advantage_vals = rewards_togo - value.squeeze()
+        # normalize https://datascience.stackexchange.com/questions/20098/why-do-we-normalize-the-discounted-rewards-when-doing-policy-gradient-reinforcem
+        advantage_vals = (advantage_vals - torch.mean(advantage_vals)) / (
+                torch.std(advantage_vals) + self.hyperparameter.numeric_stable)
 
         # Optimize surrogate L w.r.t. θ with K epochs and minibatch size M ≤ N T
-        self.optimize_neural_networks(observations, actions, K=10)
+        self.optimize_neural_networks(observations, actions, log_probs, advantage_vals, rewards_togo, K=10)
 
-    def optimize_neural_networks(self, observations, actions, K) -> None:
+    def optimize_neural_networks(self, observations, actions, log_probs, advantage_values, rewards_togo, K) -> None:
         """
         Optimize surrogate L w.r.t. θ with K epochs and minibatch size M ≤ N T
+        todo: hier gibt es probleme mit dem Gradienten graph retain blablabla
         :return:
         """
         for i in range(K):
-            value, log_probs = self.evaluate_value_function(observations,
-                                                            actions)  # this expression changes as the NN is updated!
+            # this expression changes as the NN is updated!
+            value, current_log_probs = self.evaluate_value_function(observations, actions)
 
             # compute surrogate objective function
             surrogate = 0.0
             if self.surrogate_objective == "clipped":
-                surrogate = self.clipped_surrogate_function()
+                surrogate = self.clipped_surrogate_function(old=log_probs, new=current_log_probs,
+                                                            advantage_values=advantage_values)
             elif self.surrogate_objective == "adaptive_KL":
-                surrogate = self.adaptive_KL_surrogate_function()
+                surrogate = self.adaptive_KL_surrogate_function(old=log_probs, new=current_log_probs,
+                                                                advantage_values=advantage_values, clip=True)
             elif self.surrogate_objective == "policy_gradient":
                 surrogate = self.policy_gradient_surrogate_funcion()
 
-            policy_net_loss = - surrogate # maximization!
+            print("Iteration=",i)
+
+            policy_net_loss = - surrogate  # maximization!
             self.policy_network_optimizer.zero_grad()
-            policy_net_loss.backward()
+            policy_net_loss.backward(retain_graph=True)
             self.policy_network_optimizer.step()
 
-            # todo: was nimmt man also Value function loss?
-            value_function_net_loss = None
+
+            # todo: MSE loss oder huber loss?
+            value_function_net_loss = nn.MSELoss()(value.squeeze(), rewards_togo)
             self.value_func_network_optimizer.zero_grad()
             value_function_net_loss.backward()
             self.value_func_network_optimizer.step()
 
-    def compute_advantage_values(self, value: torch.Tensor, rewards: torch.Tensor, episode_lengths: torch.Tensor) \
+    def compute_rewards_togo(self, rewards: torch.Tensor, episode_lengths: torch.Tensor) \
             -> torch.Tensor:
         """
-        Paper specifies a couple of estimators are they equivalent?
-        Implementations contain other, different estimators, which one to use?
+        Implementation of the advantage function estimator
+        see https://danieltakeshi.github.io/2017/04/02/notes-on-the-generalized-advantage-estimation-paper/ for reference
 
-        :param value:
         :param rewards:
         :param episode_lengths:
         :return: advantage values torch.Tensor
         """
-        # todo: lese https://danieltakeshi.github.io/2017/04/02/notes-on-the-generalized-advantage-estimation-paper/
-        number_of_episodes = episode_lengths.size()
+        number_of_episodes = episode_lengths.shape[0]
 
-        # todo check if this index magic is working!
+        # todo check if this index magic is working! --> works but correct?
         discounted_rewards = []
         offset = 0
         for i in range(number_of_episodes):
@@ -148,7 +170,7 @@ class PPO(nn.Module):
             offset += length
         discounted_rewards = torch.tensor(discounted_rewards)
 
-        return discounted_rewards - value
+        return discounted_rewards
 
     def evaluate_value_function(self, observations: torch.Tensor, actions: torch.Tensor) \
             -> Tuple[torch.Tensor, torch.Tensor]:
@@ -159,7 +181,7 @@ class PPO(nn.Module):
         :return:
         """
         value = self.value_func_network(observations)
-        _, _, distribution = self.policy_network(observations)
+        _, _, distribution = self.policy_network(observations, return_distribution=True)
         log_probs = distribution.log_prob(actions)
 
         return value, log_probs
@@ -180,23 +202,21 @@ class PPO(nn.Module):
 
         for actor in range(N):
             observation = self.env.reset()
-            rollout_buffer.observations.append(observation)
-
             # episode of length T
             length = 0
             for t in range(T):
-                if self.render_env:
-                    self.env.render()
-
+                # convert observation to torch tensor
+                rollout_buffer.observations.append(observation)
+                observation = torch.tensor(observation)
                 # get action - implement action getter from current policy
-                action, log_prob = self.eval_policy()
+                action, log_prob = self.evaluate_policy(observation)
                 rollout_buffer.actions.append(action)
                 rollout_buffer.log_probabilities.append(log_prob)
 
                 observation, reward, done, info = self.env.step(action)
                 rollout_buffer.rewards.append(reward)
 
-                length = t
+                length = t + 1  # iteration over t start at 0
                 if done:  # if environment sequence is over break from this loop!
                     break
 
@@ -214,11 +234,9 @@ class PPO(nn.Module):
         """
         r_t = torch.exp(new) / torch.exp(old)
 
-        surrogate = torch.min(torch.tensor([
-            r_t * advantage_values,
-            torch.clamp(r_t, 1 - self.hyperparameter.epsilon_clip, 1 + self.hyperparameter.epsilon_clip)
-        ]))
-
+        surrogate = torch.mean(torch.min(r_t * advantage_values,
+                                         torch.clamp(r_t, 1 - self.hyperparameter.epsilon_clip,
+                                                     1 + self.hyperparameter.epsilon_clip) * advantage_values))
         return surrogate
 
     def adaptive_KL_surrogate_function(self, old: torch.Tensor, new: torch.Tensor,
@@ -245,21 +263,10 @@ class PPO(nn.Module):
 
         return combined
 
-    def policy_gradient_surrogate_funcion(self) -> torch.Tensor:
+    def policy_gradient_surrogate_funcion(self, old: torch.Tensor, new: torch.Tensor,
+                                          advantage_values: torch.Tensor) -> torch.Tensor:
         """
         todo: implement
         :return:
         """
-        return 0
-
-
-def __main__():
-    ENV_NAMES = ["CartPole-v1", "MountainCar-v0", "MsPacman-v0", "Hopper-v3"]
-
-    print("Hello World")
-    ppo = PPO(ENV_NAMES[0])
-    ppo.rollout_buffer(5, 2)
-
-
-if __name__ == "__main__":
-    __main__()
+        raise NotImplementedError
