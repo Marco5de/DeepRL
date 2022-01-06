@@ -16,7 +16,7 @@ class Hyperparameter:
         self.beta = 1.0
         self.d_target_ratio = 1.5
         self.d_target = 0.1
-        self.var = 0.1  # try different variance!
+        self.var = 0.5  # try different variance!
         self.N = 32  # minibatches
         self.T = 1024  # nsteps
         self.K = 10  # noptepochs
