@@ -1,4 +1,5 @@
-import time, sys
+import sys, time, os
+from datetime import datetime
 import gym
 import pybulletgym
 
@@ -10,16 +11,25 @@ ENV_NAMES = ["AntPyBulletEnv-v0", "HalfCheetahPyBulletEnv-v0", "Walker2DPyBullet
              "HumanoidFlagrunHarderPyBulletEnv-v0", "AtlasPyBulletEnv-v0", "PusherPyBulletEnv-v0",
              ]
 
+SAVE_MODEL_FREQ = 100
+
 
 def train():
-    agent = PPO(ENV_NAMES[0], surrogate_objective="clipped", render_env=False, base_lr=0.001)
+    ctime = datetime.now()
+    dt_string = "model_" + ctime.strftime("%d_%m_%y-%H_%M_%s")
+    dt_string = os.path.join("res", "model", dt_string)
+    print(dt_string)
+    agent = PPO(ENV_NAMES[0], model_save_dir=dt_string, surrogate_objective="clipped", render_env=True, base_lr=0.001)
 
 
-    for i in range(10):
+    for i in range(10000):
         agent()
 
+        if i % SAVE_MODEL_FREQ == 0:
+            agent.save_model()
 
-def test_env(env_name: str) -> None:
+
+def env_test(env_name: str) -> None:
     env = gym.make(env_name)
     env.render()
     print(f"Env.action_space: {env.action_space} Env.observation_space: {env.observation_space}\n")

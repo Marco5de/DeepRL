@@ -2,3 +2,4 @@ venv
 .idea
 extern/
 src/__pycache__
+res/model
