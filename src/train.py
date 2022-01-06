@@ -22,9 +22,9 @@ ENV_NAMES = ["AntPyBulletEnv-v0",  # 0
              ]
 
 SAVE_MODEL_FREQ = 100
-EVAL_FREQ = 10
+EVAL_FREQ = 25
 TRAIN_STEPS = 10000
-ENV_IDX = 4
+ENV_IDX = 12
 RENDER_ENV = False
 
 
