@@ -11,22 +11,6 @@ from src.ANN import PolicyNetwork, ValueFunctionNetwork
 from src.util import kullback_leibler_div
 
 
-class Hyperparameter:
-    def __init__(self):
-        # todo find value from paper / impl
-        # https://github.com/araffin/rl-baselines-zoo/blob/master/hyperparams/ppo2.yml
-        self.epsilon_clip = 0.2 # cliprange
-        self.gamma = 0.99
-        self.beta = 1.0
-        self.d_target_ratio = 1.5
-        self.d_target = 0.1
-        self.var = 1.0
-        self.N = 32 # minibatches
-        self.T = 64 # nsteps
-        self.K = 10 # noptepochs
-        self.numeric_stable = 1e-9
-
-
 class RolloutBuffer:
     """
     Implementation of a rollout buffer which is filled when sampling data from the environment in the PPO algorithm
@@ -57,7 +41,7 @@ class RolloutBuffer:
 class PPO(nn.Module):
     _valid_surrogate_objectives = ["clipped", "adaptive_KL", "policy_gradient"]
 
-    def __init__(self, gym_name: str, model_save_dir: str, surrogate_objective: str, render_env: bool, base_lr: float):
+    def __init__(self, gym_name: str, model_save_dir: str, surrogate_objective: str, render_env: bool):
         super().__init__()
         assert surrogate_objective in self._valid_surrogate_objectives, "Specified surrogate objective is not valid!"
         self.env = gym.make(gym_name)
@@ -72,7 +56,7 @@ class PPO(nn.Module):
 
         self.env = DummyVecEnv([lambda: gym.make(gym_name)])
         self.env = VecNormalize(self.env, norm_obs=True, norm_reward=True,
-                                clip_obs=10.0) # todo: was ist für clip ein sinnvoller wert?
+                                clip_obs=10.0)  # todo: was ist für clip ein sinnvoller wert?
 
         self.model_save_dir = model_save_dir
         if not os.path.exists(self.model_save_dir):
@@ -93,12 +77,14 @@ class PPO(nn.Module):
         self.policy_network = PolicyNetwork(input_dim=self.state_space_dim,
                                             output_dim=self.action_space_dim,
                                             covariance_mat=self.cov_mat)
-        self.policy_network_optimizer = torch.optim.Adam(self.policy_network.parameters(), lr=base_lr)
+        self.policy_network_optimizer = torch.optim.Adam(self.policy_network.parameters(),
+                                                         lr=self.hyperparameter.base_lr)
 
         self.value_func_network = ValueFunctionNetwork(input_dim=self.state_space_dim)
-        self.value_func_network_optimizer = torch.optim.Adam(self.value_func_network.parameters(), lr=base_lr)
+        self.value_func_network_optimizer = torch.optim.Adam(self.value_func_network.parameters(),
+                                                             lr=self.hyperparameter.base_lr)
 
-    def forward(self) -> None:
+    def forward(self) -> Tuple[float, float]:
         """
         Learning is done in here, this function must be called repeatedly for #training_steps
         :return:
@@ -161,12 +147,12 @@ class PPO(nn.Module):
         """
         Implementation of the advantage function estimator
         see https://danieltakeshi.github.io/2017/04/02/notes-on-the-generalized-advantage-estimation-paper/ for reference
+        todo: implementation should be correct, checked for small samples
 
         :param rewards:
         :param episode_lengths:
         :return: advantage values torch.Tensor
         """
-        # todo check if this index magic is working! --> works but correct?
         discounted_rewards = []
         offset = 0
         for i in range(self.hyperparameter.N):
@@ -250,7 +236,7 @@ class PPO(nn.Module):
                 rollout_buffer.actions.append(action)
                 rollout_buffer.log_probabilities.append(log_prob)
 
-                observation, reward, done, info = self.env.step(action)
+                observation, reward, done, info = self.env.step(action.detach().numpy())
                 rollout_buffer.rewards.append(reward)
 
                 length = t + 1  # iteration over t start at 0

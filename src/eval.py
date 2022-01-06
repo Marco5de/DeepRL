@@ -1,7 +1,5 @@
-import os, time
+import os
 from datetime import datetime
-import gym
-import torch
 
 from src.PPO import PPO
 from src.train import ENV_NAMES
@@ -16,28 +14,14 @@ def eval():
     dt_string = "model_" + ctime.strftime("%d_%m_%y-%H_%M_%s")
     dt_string = os.path.join("res", "model", dt_string)
 
-    agent = PPO(ENV_NAMES[0], model_save_dir=dt_string, surrogate_objective="clipped", render_env=True, base_lr=0.001)
+    agent = PPO(ENV_NAMES[0], model_save_dir=dt_string, surrogate_objective="clipped", render_env=RENDER_ENV,
+                base_lr=0.001)
     agent.load_model(MODEL_DIR_PATH)
 
-    env = gym.make(ENV_NAMES[0])
+    avg_episodic_reward, ep_length = agent.validation(num_episodes=NUM_EPISODES)
 
-    cum_rewards = 0.0
-
-    if RENDER_ENV:
-        env.render()
-
-    for episode in range(NUM_EPISODES):
-        obs = env.reset()
-
-        done = False
-        while not done:
-            action, _ = agent.evaluate_policy(torch.tensor(obs))
-            obs, reward, done, info = env.step(action.detach().numpy())
-            cum_rewards += reward
-            if RENDER_ENV:
-                time.sleep(0.01)
-
-    print(f"Average reward= {cum_rewards / NUM_EPISODES}")
+    print(f"Average reward= {avg_episodic_reward}\n"
+          f"Episode lengths: {ep_length}\n")
 
 
 if __name__ == "__main__":

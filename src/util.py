@@ -1,6 +1,7 @@
 import torch
 
 
+
 def kullback_leibler_div(m1: torch.Tensor, s1: torch.Tensor, m2: torch.Tensor, s2: torch.Tensor) -> torch.Tensor:
     """
      Computes the Kullback-Leibler Divergence of two multivariate gaussians D(P_1 || P_2)

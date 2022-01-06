@@ -24,7 +24,8 @@ ENV_NAMES = ["AntPyBulletEnv-v0",  # 0
 SAVE_MODEL_FREQ = 100
 EVAL_FREQ = 10
 TRAIN_STEPS = 10000
-ENV_IDX = 12
+ENV_IDX = 4
+RENDER_ENV = False
 
 
 def train():
@@ -32,8 +33,7 @@ def train():
     dt_string = "model_" + ctime.strftime("%d_%m_%y-%H_%M_%s")
     dt_string = os.path.join("res", "model", dt_string)
     print(dt_string)
-    agent = PPO(ENV_NAMES[ENV_IDX], model_save_dir=dt_string, surrogate_objective="clipped", render_env=False,
-                base_lr=2.5e-4)
+    agent = PPO(ENV_NAMES[ENV_IDX], model_save_dir=dt_string, surrogate_objective="clipped", render_env=RENDER_ENV)
 
     writer = SummaryWriter(log_dir=os.path.join("res/log_dir", dt_string))
 
