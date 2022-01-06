@@ -4,3 +4,4 @@ extern/
 src/__pycache__
 res/model
 res/log_dir
+src/compare.py
