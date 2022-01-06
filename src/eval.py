@@ -1,14 +1,13 @@
 import os, time
 from datetime import datetime
 import gym
-import pybulletgym
 import torch
 
 from src.PPO import PPO
 from src.train import ENV_NAMES
 
-RENDER_ENV = True
-MODEL_DIR_PATH = "res/model/model_06_01_22-13_03_1641470638"
+RENDER_ENV = False
+MODEL_DIR_PATH = "res/model/model_06_01_22-13_43_1641473027"
 NUM_EPISODES = 100
 
 
@@ -23,7 +22,6 @@ def eval():
     env = gym.make(ENV_NAMES[0])
 
     cum_rewards = 0.0
-    step = 0
 
     if RENDER_ENV:
         env.render()
@@ -33,23 +31,13 @@ def eval():
 
         done = False
         while not done:
-            action, log_probs = agent.evaluate_policy(torch.tensor(obs))
-            obs, reward, done, info = env.step(action)
+            action, _ = agent.evaluate_policy(torch.tensor(obs))
+            obs, reward, done, info = env.step(action.detach().numpy())
             cum_rewards += reward
-            step += 1
-            time.sleep(0.01)
+            if RENDER_ENV:
+                time.sleep(0.01)
 
-        print(f"Average reward= {cum_rewards / step}")
-
-
-
-
-
-
-
-
-
-
+    print(f"Average reward= {cum_rewards / NUM_EPISODES}")
 
 
 if __name__ == "__main__":
