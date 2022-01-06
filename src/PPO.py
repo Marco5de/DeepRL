@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import torch
 import torch.nn as nn
 import torch.optim
@@ -19,9 +19,9 @@ class Hyperparameter:
         self.d_target_ratio = 1.5
         self.d_target = 0.1
         self.var = 1.0
-        self.N = 10
-        self.T = 10
-        self.K = 5
+        self.N = 30
+        self.T = 50
+        self.K = 1
         self.numeric_stable = 1e-9
 
 
@@ -55,10 +55,15 @@ class RolloutBuffer:
 class PPO(nn.Module):
     _valid_surrogate_objectives = ["clipped", "adaptive_KL", "policy_gradient"]
 
-    def __init__(self, gym_name: str, surrogate_objective: str, render_env: bool, base_lr: float):
+    def __init__(self, gym_name: str, model_save_dir: str, surrogate_objective: str, render_env: bool, base_lr: float):
         super().__init__()
         assert surrogate_objective in self._valid_surrogate_objectives, "Specified surrogate objective is not valid!"
         self.env = gym.make(gym_name)
+        self.model_save_dir = model_save_dir
+        if not os.path.exists(self.model_save_dir):
+            os.makedirs(self.model_save_dir)
+        else:
+            raise Exception("Directory already exists")
 
         self.render_env = render_env
         if self.render_env:
@@ -108,7 +113,10 @@ class PPO(nn.Module):
                 torch.std(advantage_vals) + self.hyperparameter.numeric_stable)
 
         # Optimize surrogate L w.r.t. θ with K epochs and minibatch size M ≤ N T
-        self.optimize_neural_networks(observations, actions, log_probs, advantage_vals, rewards_togo, K=10)
+        self.optimize_neural_networks(observations, actions, log_probs, advantage_vals, rewards_togo,
+                                      K=self.hyperparameter.K)
+
+        print("Step comlete")
 
     def optimize_neural_networks(self, observations, actions, log_probs, advantage_values, rewards_togo, K) -> None:
         """
@@ -131,19 +139,19 @@ class PPO(nn.Module):
             elif self.surrogate_objective == "policy_gradient":
                 surrogate = self.policy_gradient_surrogate_funcion()
 
-            print("Iteration=",i)
-
             policy_net_loss = - surrogate  # maximization!
             self.policy_network_optimizer.zero_grad()
             policy_net_loss.backward(retain_graph=True)
             self.policy_network_optimizer.step()
-
 
             # todo: MSE loss oder huber loss?
             value_function_net_loss = nn.MSELoss()(value.squeeze(), rewards_togo)
             self.value_func_network_optimizer.zero_grad()
             value_function_net_loss.backward()
             self.value_func_network_optimizer.step()
+
+            print(f"Policy net loss= {policy_net_loss.detach()}\n"
+                  f"Value Func. loss= {value_function_net_loss.detach()}")
 
     def compute_rewards_togo(self, rewards: torch.Tensor, episode_lengths: torch.Tensor) \
             -> torch.Tensor:
@@ -270,3 +278,15 @@ class PPO(nn.Module):
         :return:
         """
         raise NotImplementedError
+
+    def save_model(self):
+        torch.save(self.policy_network.state_dict(), os.path.join(self.model_save_dir, "policy_net.pth"))
+        torch.save(self.value_func_network.state_dict(), os.path.join(self.model_save_dir, "value_net.pth"))
+        print(f"Saved model parameters to {self.model_save_dir}")
+
+    def load_model(self, model_path):
+        policy_net_path = os.path.join(model_path, "policy_net.pth")
+        value_net_path = os.path.join(model_path, "value_net.pth")
+
+        self.policy_network.load_state_dict(torch.load(policy_net_path))
+        self.value_func_network.load_state_dict(torch.load(value_net_path))
