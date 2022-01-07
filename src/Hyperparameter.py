@@ -16,12 +16,15 @@ class Hyperparameter:
         self.beta = 1.0
         self.d_target_ratio = 1.5
         self.d_target = 0.1
-        self.var = 0.1  # try different variance!
-        self.N = 32  # minibatches
-        self.T = 1024  # nsteps
+        self.var = 0.5  # try different variance!
+        self.N = 2048  # nsteps
+        self.T = 200   # minibatches / max steps per episode
         self.K = 10  # noptepochs
-        self.numeric_stable = 1e-9
-        self.base_lr = 2.5e-4
+        self.numeric_stable = 1e-10
+        self.base_lr = 3e-4
+
+        # todo: ich verwende die HP anders!
+        self.N = self.N // self.T
 
     def read_yaml(self, env_name):
         with open("res/hyperparameter.yaml") as f:

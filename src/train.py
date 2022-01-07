@@ -1,7 +1,7 @@
 import sys, time, os
 from datetime import datetime
 import gym
-import pybulletgym
+# import pybulletgym # todo uncomment
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 
@@ -25,12 +25,13 @@ ENV_NAMES = ["AntPyBulletEnv-v0",  # 0
              "InvertedPendulumMuJoCoEnv-v0", # 13
              "ReacherMuJoCoEnv-v0", # 14
              "AntMuJoCoEnv-v0", # 15
+             "Pendulum-v0", #16
              ]
 
 SAVE_MODEL_FREQ = 100
-EVAL_FREQ = 25
-TRAIN_STEPS = 10000
-ENV_IDX = 4
+LOG_FREQ = 1
+TRAIN_STEPS = 800
+ENV_IDX = 16
 RENDER_ENV = False
 
 
@@ -44,20 +45,23 @@ def train():
     writer = SummaryWriter(log_dir=os.path.join("res/log_dir", dt_string))
 
     for i in range(TRAIN_STEPS):
-        policy_net_loss, value_net_loss = agent()
-        writer.add_scalar("loss/policy", policy_net_loss, global_step=i)
-        writer.add_scalar("loss/value", value_net_loss, global_step=i)
+        policy_net_loss, value_net_loss, avg_return, avg_len = agent()
+        writer.add_scalar("loss/policy", policy_net_loss, global_step=agent.c_time_step)
+        writer.add_scalar("loss/value", value_net_loss, global_step=agent.c_time_step)
+        writer.add_scalar("reward/avg_ep_reward", avg_return, global_step=agent.c_time_step)
+        writer.add_scalar("reward/avg_ep_len", avg_len, global_step=agent.c_time_step)
 
         if i % SAVE_MODEL_FREQ == 0 and i != 0:
             agent.save_model()
 
-        if i % EVAL_FREQ == 0:
-            avg_reward, episode_lengths = agent.validation(num_episodes=3)
-            writer.add_scalar("episode_reward", avg_reward, global_step=i // EVAL_FREQ)
-            print(f"~~~ Evaluation Summary ~~~\n"
-                  f"Current average reward per episode= {avg_reward}\n"
-                  f"Normalized reward: {avg_reward / (np.array(episode_lengths).sum())}\n"
-                  f"Episode lengths: {episode_lengths}\n")
+        if i % LOG_FREQ == 0:
+            print(f"~~~Train Summary~~~\n"
+                  f"Current time step= {agent.c_time_step}\n"
+                  f"Current avg. episodic reward= {avg_return}\n"
+                  f"Avg episode length= {avg_len}\n"
+                  f"Policy-loss= {policy_net_loss:.4f} Value-loss= {value_net_loss:.4f}\n"
+                  f"~~~ END Summary~~~ ")
+
 
 
 def env_test(env_name: str) -> None:
