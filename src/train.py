@@ -4,7 +4,7 @@ import gym
 # import pybulletgym # todo uncomment
 from torch.utils.tensorboard import SummaryWriter
 
-from src.lib.PPO import PPO
+from lib.PPO import PPO
 
 ENV_NAMES = ["AntPyBulletEnv-v0",  # 0
              "HalfCheetahPyBulletEnv-v0",  # 1

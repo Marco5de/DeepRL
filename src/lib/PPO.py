@@ -8,9 +8,9 @@ import gym
 from typing import Tuple, List
 from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
 
-from src.lib.ANN import PolicyNetwork, ValueFunctionNetwork
-from src.lib.util import kullback_leibler_div
-from src.lib.Hyperparameter import Hyperparameter
+from lib.ANN import PolicyNetwork, ValueFunctionNetwork
+from lib.util import kullback_leibler_div
+from lib.Hyperparameter import Hyperparameter
 
 
 class RolloutBuffer:
