@@ -1,5 +1,4 @@
 import sys, os
-import time
 
 import torch
 import torch.nn as nn
@@ -12,6 +11,7 @@ from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
 from src.ANN import PolicyNetwork, ValueFunctionNetwork
 from src.util import kullback_leibler_div
 from src.Hyperparameter import Hyperparameter
+
 
 class RolloutBuffer:
     """
@@ -47,18 +47,25 @@ class PPO(nn.Module):
         super().__init__()
         assert surrogate_objective in self._valid_surrogate_objectives, "Specified surrogate objective is not valid!"
         self.env = gym.make(gym_name)
-        self.state_space_dim = len(self.env.robot.observation_space.high)
-        self.action_space_dim = len(self.env.robot.action_space.high)
+        try:
+            self.state_space_dim = len(self.env.robot.observation_space.high)
+            self.action_space_dim = len(self.env.robot.action_space.high)
 
-        self.action_space_lim = (self.env.robot.action_space.low, self.env.robot.action_space.high)
-        self.state_space_lim = (self.env.robot.observation_space.low, self.env.robot.observation_space.high)
+            self.action_space_lim = (self.env.robot.action_space.low, self.env.robot.action_space.high)
+            self.state_space_lim = (self.env.robot.observation_space.low, self.env.robot.observation_space.high)
+        except:
+            self.state_space_dim = len(self.env.observation_space.low)
+            self.action_space_dim = len(self.env.action_space.low)
+
+            self.action_space_lim = (self.env.action_space.low, self.env.action_space.high)
+            self.state_space_lim = (self.env.observation_space.low, self.env.observation_space.high)
 
         print(f"Action space limits (low, high)= {self.action_space_lim}\nState space limits (low, high)= "
               f"{self.state_space_lim}")
 
         self.env = DummyVecEnv([lambda: gym.make(gym_name)])
-        self.env = VecNormalize(self.env, norm_obs=True, norm_reward=True,
-                                clip_obs=10.0)  # todo: was ist für clip ein sinnvoller wert?
+        self.env = VecNormalize(self.env, norm_obs=True, norm_reward=False,
+                                clip_obs=self.state_space_lim[1])  # todo: was ist für clip ein sinnvoller wert?
 
         self.model_save_dir = model_save_dir
         if not os.path.exists(self.model_save_dir):
@@ -76,32 +83,47 @@ class PPO(nn.Module):
         # covariance chosen the same for all dimension (assuming that the action space is normed!
         self.cov_mat = torch.diag(torch.tensor([self.hyperparameter.var] * self.action_space_dim))
 
+        # todo: testing relu usage instead of tanh
         self.policy_network = PolicyNetwork(input_dim=self.state_space_dim,
                                             output_dim=self.action_space_dim,
-                                            covariance_mat=self.cov_mat)
+                                            covariance_mat=self.cov_mat,
+                                            activation=torch.relu)
         self.policy_network_optimizer = torch.optim.Adam(self.policy_network.parameters(),
                                                          lr=self.hyperparameter.base_lr)
 
-        self.value_func_network = ValueFunctionNetwork(input_dim=self.state_space_dim)
+        self.value_func_network = ValueFunctionNetwork(input_dim=self.state_space_dim,
+                                                       activation=torch.relu)
         self.value_func_network_optimizer = torch.optim.Adam(self.value_func_network.parameters(),
                                                              lr=self.hyperparameter.base_lr)
 
-    def forward(self) -> Tuple[float, float]:
+        self.c_time_step = 0
+
+    def forward(self) -> Tuple[float, float, float, float]:
         """
         Learning is done in here, this function must be called repeatedly for #training_steps
         :return:
         """
         # sample data - Run policy π_θ_old in environment for T time steps using N actors
         rollout_buffer = self.sample_data(N=self.hyperparameter.N, T=self.hyperparameter.T)
+        self.c_time_step += len(rollout_buffer.observations)
         actions, log_probs, observations, rewards, episode_length = rollout_buffer.to_tensor()
 
         advantage_vals, rewards_togo = self.compute_advantage_values(observations, actions, rewards, episode_length)
+
+        if False:
+            print(f"Obs mean = {observations.mean()}\n"
+                  f"Actions mean = {actions.mean()}\n"
+                  f"Log prob mean = {log_probs.mean()}\n"
+                  f"rtg_mean = {rewards_togo.mean()}")
 
         # Optimize surrogate L w.r.t. θ with K epochs and minibatch size M ≤ N T
         polidcy_net_loss, value_net_loss = self.optimize_neural_networks(observations, actions, log_probs,
                                                                          advantage_vals, rewards_togo,
                                                                          K=self.hyperparameter.K)
-        return polidcy_net_loss, value_net_loss
+
+        avg_return, avg_len = self.compute_avg_episodic_returns(rewards, episode_length)
+
+        return polidcy_net_loss, value_net_loss, avg_return, avg_len
 
     def optimize_neural_networks(self, observations, actions, log_probs, advantage_values, rewards_togo, K) \
             -> Tuple[float, float]:
@@ -112,22 +134,23 @@ class PPO(nn.Module):
         avg_policy_net_loss = 0.0
         avg_value_net_loss = 0.0
 
-        for i in range(K):
+        for step in range(K):
+            # todo: vermutung, mit den current oder batch log probs stimmt etwas nicht!
             # this expression changes as the NN is updated!
             value, current_log_probs = self.evaluate_value_function(observations, actions)
 
             # compute surrogate objective function
-            surrogate = 0.0
+            policy_net_loss = 0.0
             if self.surrogate_objective == "clipped":
-                surrogate = self.clipped_surrogate_function(old=log_probs, new=current_log_probs,
-                                                            advantage_values=advantage_values)
+                policy_net_loss = self.clipped_surrogate_function(old=log_probs, new=current_log_probs,
+                                                                  advantage_values=advantage_values)
             elif self.surrogate_objective == "adaptive_KL":
-                surrogate = self.adaptive_KL_surrogate_function(old=log_probs, new=current_log_probs,
-                                                                advantage_values=advantage_values, clip=True)
+                policy_net_loss = self.adaptive_KL_surrogate_function(old=log_probs, new=current_log_probs,
+                                                                      advantage_values=advantage_values, clip=True)
             elif self.surrogate_objective == "policy_gradient":
-                surrogate = self.policy_gradient_surrogate_funcion()
+                policy_net_loss = self.policy_gradient_surrogate_funcion()
 
-            policy_net_loss = - surrogate  # maximization!
+            # todo: ich glaube hier war das falsche Vorzeichen!
             self.policy_network_optimizer.zero_grad()
             policy_net_loss.backward(retain_graph=True)
             self.policy_network_optimizer.step()
@@ -142,7 +165,7 @@ class PPO(nn.Module):
             avg_policy_net_loss += policy_net_loss.detach()
             avg_value_net_loss += value_function_net_loss.detach()
 
-        return avg_policy_net_loss, avg_value_net_loss
+        return avg_policy_net_loss / K, avg_value_net_loss / K
 
     def compute_rewards_togo(self, rewards: torch.Tensor, episode_lengths: torch.Tensor) \
             -> torch.Tensor:
@@ -178,10 +201,11 @@ class PPO(nn.Module):
         :return:
         """
         value = self.value_func_network(observations)
-        _, _, distribution = self.policy_network(observations, return_distribution=True)
+        mean = self.policy_network(observations, return_mean=True)
+        distribution = torch.distributions.MultivariateNormal(mean, self.cov_mat)
         log_probs = distribution.log_prob(actions)
 
-        return value, log_probs
+        return value, log_probs.squeeze()
 
     def evaluate_policy(self, observation: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -209,11 +233,10 @@ class PPO(nn.Module):
 
         rewards_togo = self.compute_rewards_togo(rewards, episode_length)
         # graph of values is not required --> detach
-        # value = value.detach()
         advantage_vals = rewards_togo - value.detach().squeeze()
         # normalize https://datascience.stackexchange.com/questions/20098/why-do-we-normalize-the-discounted-rewards-when-doing-policy-gradient-reinforcem
-        advantage_vals = (advantage_vals - torch.mean(advantage_vals)) / (
-                torch.std(advantage_vals) + self.hyperparameter.numeric_stable)
+        advantage_vals = (advantage_vals - advantage_vals.mean()) / \
+                         (advantage_vals.std() + self.hyperparameter.numeric_stable)
         return advantage_vals, rewards_togo
 
     def sample_data(self, N: int, T: int) -> RolloutBuffer:
@@ -257,13 +280,11 @@ class PPO(nn.Module):
         PPO paper section (3)
         :return: value of clipped surrogate function
         """
-        ratios = torch.exp(new - old)
+        ratios = torch.exp(new) / torch.exp(old)
         policy_loss1 = ratios * advantage_values
         policy_loss2 = torch.clamp(ratios, 1 - self.hyperparameter.epsilon_clip,
-                            1 + self.hyperparameter.epsilon_clip) * advantage_values
-        policy_loss = - torch.min(policy_loss1, policy_loss2).mean()
-
-        return policy_loss
+                                   1 + self.hyperparameter.epsilon_clip) * advantage_values
+        return - torch.min(policy_loss1, policy_loss2).mean()
 
     def adaptive_KL_surrogate_function(self, old: torch.Tensor, new: torch.Tensor,
                                        advantage_values: torch.Tensor, clip: bool = True) -> torch.Tensor:
@@ -295,6 +316,24 @@ class PPO(nn.Module):
         :return:
         """
         raise NotImplementedError
+
+    def compute_avg_episodic_returns(self, rewards: torch.Tensor, episode_lengths: torch.Tensor) -> Tuple[float, float]:
+        cum_return = 0.0
+        cum_len = 0.0
+        offset = 0
+
+        for episode_len in episode_lengths:
+            sum = 0.0
+            for i in range(episode_len):
+                sum += rewards[i + offset]
+                offset = i + 1
+            cum_len += episode_len
+            cum_return += sum
+
+        avg_return = cum_return / len(episode_lengths)
+        avg_len = cum_len / len(episode_lengths)
+
+        return avg_return, avg_len
 
     def validation(self, num_episodes) -> Tuple[float, List[int]]:
         """
