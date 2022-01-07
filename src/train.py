@@ -3,6 +3,7 @@ from datetime import datetime
 import gym
 import pybulletgym
 from torch.utils.tensorboard import SummaryWriter
+import numpy as np
 
 from src.PPO import PPO
 
@@ -19,12 +20,17 @@ ENV_NAMES = ["AntPyBulletEnv-v0",  # 0
              "AtlasPyBulletEnv-v0",  # 10
              "PusherPyBulletEnv-v0",  # 11
              "ReacherPyBulletEnv-v0",  # 12
+
+             # Mujoco Envs
+             "InvertedPendulumMuJoCoEnv-v0", # 13
+             "ReacherMuJoCoEnv-v0", # 14
+             "AntMuJoCoEnv-v0", # 15
              ]
 
 SAVE_MODEL_FREQ = 100
 EVAL_FREQ = 25
 TRAIN_STEPS = 10000
-ENV_IDX = 12
+ENV_IDX = 4
 RENDER_ENV = False
 
 
@@ -48,8 +54,10 @@ def train():
         if i % EVAL_FREQ == 0:
             avg_reward, episode_lengths = agent.validation(num_episodes=3)
             writer.add_scalar("episode_reward", avg_reward, global_step=i // EVAL_FREQ)
-            print(f"Current average reward per episode= {avg_reward}\n"
-                  f"Episode lengths: {episode_lengths}")
+            print(f"~~~ Evaluation Summary ~~~\n"
+                  f"Current average reward per episode= {avg_reward}\n"
+                  f"Normalized reward: {avg_reward / (np.array(episode_lengths).sum())}\n"
+                  f"Episode lengths: {episode_lengths}\n")
 
 
 def env_test(env_name: str) -> None:

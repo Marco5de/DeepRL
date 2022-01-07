@@ -34,7 +34,7 @@ class RolloutBuffer:
         tensor_actions = torch.stack(self.actions)
         tensor_log_probs = torch.tensor(self.log_probabilities)
         tensor_observations = torch.tensor(np.stack(self.observations))
-        tensor_rewards = torch.tensor(self.rewards)
+        tensor_rewards = torch.tensor(np.array(self.rewards))
         tensor_episode_length = torch.tensor(self.episode_length)
 
         return tensor_actions, tensor_log_probs, tensor_observations, tensor_rewards, tensor_episode_length
@@ -257,21 +257,13 @@ class PPO(nn.Module):
         PPO paper section (3)
         :return: value of clipped surrogate function
         """
-
-        """ todo: trying different implementation of surrogate function
-        r_t = torch.exp(new) / torch.exp(old)
-
-        surrogate = torch.mean(torch.min(r_t * advantage_values,
-                                         torch.clamp(r_t, 1 - self.hyperparameter.epsilon_clip,
-                                                     1 + self.hyperparameter.epsilon_clip) * advantage_values))
-        """
         ratios = torch.exp(new - old)
-        surr1 = ratios * advantage_values
-        surr2 = torch.clamp(ratios, 1 - self.hyperparameter.epsilon_clip,
+        policy_loss1 = ratios * advantage_values
+        policy_loss2 = torch.clamp(ratios, 1 - self.hyperparameter.epsilon_clip,
                             1 + self.hyperparameter.epsilon_clip) * advantage_values
-        surrogate = (-torch.min(surr1, surr2)).mean()
-        # """
-        return surrogate
+        policy_loss = - torch.min(policy_loss1, policy_loss2).mean()
+
+        return policy_loss
 
     def adaptive_KL_surrogate_function(self, old: torch.Tensor, new: torch.Tensor,
                                        advantage_values: torch.Tensor, clip: bool = True) -> torch.Tensor:
