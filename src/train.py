@@ -54,7 +54,7 @@ def train():
             agent.save_model()
 
         if i % LOG_FREQ == 0:
-            print(f"~~~Train Summary~~~\n"
+            print(f"~~~Train Summary {i+1} / {TRAIN_STEPS} - {i / TRAIN_STEPS * 100:.1f}% complete~~~\n"
                   f"Current time step= {agent.c_time_step}\n"
                   f"Current avg. episodic reward= {avg_return}\n"
                   f"Avg episode length= {avg_len}\n"

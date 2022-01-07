@@ -78,8 +78,6 @@ class ValueFunctionNetwork(nn.Module):
         # the output of the value function is always a scalar
         self.output = nn.Linear(hidden_layer_widths[1], 1)
 
-        self.distribution = None
-
     def forward(self, t: torch.Tensor):
         """
         Implements the forward pass of the value function network

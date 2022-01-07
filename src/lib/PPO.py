@@ -23,6 +23,7 @@ class RolloutBuffer:
         self.log_probabilities = []
         self.observations = []
         self.rewards = []
+        self.unnormed_rewards = []
         self.episode_length = []
 
     def to_tensor(self):
@@ -36,8 +37,9 @@ class RolloutBuffer:
         tensor_observations = torch.tensor(np.stack(self.observations))
         tensor_rewards = torch.tensor(np.array(self.rewards))
         tensor_episode_length = torch.tensor(self.episode_length)
+        tensor_unnormed_rewards = torch.tensor(np.array(self.unnormed_rewards))
 
-        return tensor_actions, tensor_log_probs, tensor_observations, tensor_rewards, tensor_episode_length
+        return tensor_actions, tensor_log_probs, tensor_observations, tensor_rewards, tensor_episode_length, tensor_unnormed_rewards
 
 
 class PPO(nn.Module):
@@ -64,8 +66,8 @@ class PPO(nn.Module):
               f"{self.state_space_lim}")
 
         self.env = DummyVecEnv([lambda: gym.make(gym_name)])
-        # todo: decide what to normalize?
-        self.env = VecNormalize(self.env, norm_obs=False, norm_reward=False,
+        # norm both seems to perform best
+        self.env = VecNormalize(self.env, norm_obs=True, norm_reward=True,
                                 clip_obs=self.state_space_lim[1])
 
         self.model_save_dir = model_save_dir
@@ -107,7 +109,7 @@ class PPO(nn.Module):
         # sample data - Run policy π_θ_old in environment for T time steps using N actors
         rollout_buffer = self.sample_data(N=self.hyperparameter.N, T=self.hyperparameter.T)
         self.c_time_step += len(rollout_buffer.observations)
-        actions, log_probs, observations, rewards, episode_length = rollout_buffer.to_tensor()
+        actions, log_probs, observations, rewards, episode_length, unnormed_rewards = rollout_buffer.to_tensor()
 
         advantage_vals, rewards_togo = self.compute_advantage_values(observations, actions, rewards, episode_length)
 
@@ -116,7 +118,7 @@ class PPO(nn.Module):
                                                                          advantage_vals, rewards_togo,
                                                                          K=self.hyperparameter.K)
 
-        avg_return, avg_len = self.compute_avg_episodic_returns(rewards, episode_length)
+        avg_return, avg_len = self.compute_avg_episodic_returns(unnormed_rewards, episode_length)
 
         return polidcy_net_loss, value_net_loss, avg_return, avg_len
 
@@ -130,7 +132,6 @@ class PPO(nn.Module):
         avg_value_net_loss = 0.0
 
         for step in range(K):
-            # todo: vermutung, mit den current oder batch log probs stimmt etwas nicht!
             # this expression changes as the NN is updated!
             value, current_log_probs = self.evaluate_value_function(observations, actions)
 
@@ -145,7 +146,6 @@ class PPO(nn.Module):
             elif self.surrogate_objective == "policy_gradient":
                 policy_net_loss = self.policy_gradient_surrogate_funcion()
 
-            # todo: ich glaube hier war das falsche Vorzeichen!
             self.policy_network_optimizer.zero_grad()
             policy_net_loss.backward(retain_graph=True)
             self.policy_network_optimizer.step()
@@ -167,7 +167,6 @@ class PPO(nn.Module):
         """
         Implementation of the advantage function estimator
         see https://danieltakeshi.github.io/2017/04/02/notes-on-the-generalized-advantage-estimation-paper/ for reference
-        todo: implementation should be correct, checked for small samples
 
         :param rewards:
         :param episode_lengths:
@@ -258,6 +257,7 @@ class PPO(nn.Module):
 
                 observation, reward, done, info = self.env.step(action.detach().numpy())
                 rollout_buffer.rewards.append(reward)
+                rollout_buffer.unnormed_rewards.append(self.env.unnormalize_reward(reward))
 
                 length = t + 1  # iteration over t start at 0
                 if done:  # if environment sequence is over break from this loop!
@@ -284,6 +284,7 @@ class PPO(nn.Module):
     def adaptive_KL_surrogate_function(self, old: torch.Tensor, new: torch.Tensor,
                                        advantage_values: torch.Tensor, clip: bool = True) -> torch.Tensor:
         """
+        todo: yet to be tested
         :param clip specifies whether the clipping method (see paper and clipped surrogate function) is applied
         :return:
         """
@@ -313,6 +314,12 @@ class PPO(nn.Module):
         raise NotImplementedError
 
     def compute_avg_episodic_returns(self, rewards: torch.Tensor, episode_lengths: torch.Tensor) -> Tuple[float, float]:
+        """
+        Computes the average episodic returns
+        :param rewards:             unnormalized rewards from the env
+        :param episode_lengths:     length of each of the episodes
+        :return:                    average episodic reward, average episode length
+        """
         cum_return = 0.0
         cum_len = 0.0
         offset = 0
