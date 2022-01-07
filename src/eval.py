@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 
-from src.PPO import PPO
+from src.lib.PPO import PPO
 from src.train import ENV_NAMES
 
 RENDER_ENV = False

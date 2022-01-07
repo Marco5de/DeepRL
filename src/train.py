@@ -1,11 +1,10 @@
-import sys, time, os
+import time, os
 from datetime import datetime
 import gym
 # import pybulletgym # todo uncomment
 from torch.utils.tensorboard import SummaryWriter
-import numpy as np
 
-from src.PPO import PPO
+from src.lib.PPO import PPO
 
 ENV_NAMES = ["AntPyBulletEnv-v0",  # 0
              "HalfCheetahPyBulletEnv-v0",  # 1

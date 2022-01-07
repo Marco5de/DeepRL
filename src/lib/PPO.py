@@ -1,4 +1,4 @@
-import sys, os
+import os
 
 import torch
 import torch.nn as nn
@@ -8,9 +8,9 @@ import gym
 from typing import Tuple, List
 from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
 
-from src.ANN import PolicyNetwork, ValueFunctionNetwork
-from src.util import kullback_leibler_div
-from src.Hyperparameter import Hyperparameter
+from src.lib.ANN import PolicyNetwork, ValueFunctionNetwork
+from src.lib.util import kullback_leibler_div
+from src.lib.Hyperparameter import Hyperparameter
 
 
 class RolloutBuffer:
@@ -64,8 +64,9 @@ class PPO(nn.Module):
               f"{self.state_space_lim}")
 
         self.env = DummyVecEnv([lambda: gym.make(gym_name)])
-        self.env = VecNormalize(self.env, norm_obs=True, norm_reward=False,
-                                clip_obs=self.state_space_lim[1])  # todo: was ist für clip ein sinnvoller wert?
+        # todo: decide what to normalize?
+        self.env = VecNormalize(self.env, norm_obs=False, norm_reward=False,
+                                clip_obs=self.state_space_lim[1])
 
         self.model_save_dir = model_save_dir
         if not os.path.exists(self.model_save_dir):
@@ -109,12 +110,6 @@ class PPO(nn.Module):
         actions, log_probs, observations, rewards, episode_length = rollout_buffer.to_tensor()
 
         advantage_vals, rewards_togo = self.compute_advantage_values(observations, actions, rewards, episode_length)
-
-        if False:
-            print(f"Obs mean = {observations.mean()}\n"
-                  f"Actions mean = {actions.mean()}\n"
-                  f"Log prob mean = {log_probs.mean()}\n"
-                  f"rtg_mean = {rewards_togo.mean()}")
 
         # Optimize surrogate L w.r.t. θ with K epochs and minibatch size M ≤ N T
         polidcy_net_loss, value_net_loss = self.optimize_neural_networks(observations, actions, log_probs,

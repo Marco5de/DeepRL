@@ -133,7 +133,7 @@ class ActorCriticNetwork(nn.Module):
         return self.value_head(self.common_base(obs))
 
 
-def __main__():
+def test_ANN():
     # Make sure that conv-mat is float
     cov_mat = torch.tensor([[1.0, 0, 0],
                             [0, 1.0, 0],
@@ -161,4 +161,4 @@ def __main__():
 
 
 if __name__ == "__main__":
-    __main__()
+    test_ANN()

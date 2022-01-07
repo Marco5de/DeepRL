@@ -1,7 +1,7 @@
 venv
 .idea
 extern/
-src/__pycache__
+**/__pycache__
 res/model
 res/log_dir
 src/compare.py
