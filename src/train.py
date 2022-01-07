@@ -21,10 +21,10 @@ ENV_NAMES = ["AntPyBulletEnv-v0",  # 0
              "ReacherPyBulletEnv-v0",  # 12
 
              # Mujoco Envs
-             "InvertedPendulumMuJoCoEnv-v0", # 13
-             "ReacherMuJoCoEnv-v0", # 14
-             "AntMuJoCoEnv-v0", # 15
-             "Pendulum-v0", #16
+             "InvertedPendulumMuJoCoEnv-v0",  # 13
+             "ReacherMuJoCoEnv-v0",  # 14
+             "AntMuJoCoEnv-v0",  # 15
+             "Pendulum-v0",  # 16
              ]
 
 SAVE_MODEL_FREQ = 100
@@ -44,23 +44,27 @@ def train():
     writer = SummaryWriter(log_dir=os.path.join("res/log_dir", dt_string))
 
     for i in range(TRAIN_STEPS):
+        t1 = time.time_ns()
         policy_net_loss, value_net_loss, avg_return, avg_len = agent()
+        t2 = time.time_ns()
+        duration_ns = t2 - t1
+
         writer.add_scalar("loss/policy", policy_net_loss, global_step=agent.c_time_step)
         writer.add_scalar("loss/value", value_net_loss, global_step=agent.c_time_step)
         writer.add_scalar("reward/avg_ep_reward", avg_return, global_step=agent.c_time_step)
         writer.add_scalar("reward/avg_ep_len", avg_len, global_step=agent.c_time_step)
+        writer.add_scalar("proc_time_ms", duration_ns * 1e-6, global_step=i)
 
         if i % SAVE_MODEL_FREQ == 0 and i != 0:
             agent.save_model()
 
         if i % LOG_FREQ == 0:
-            print(f"~~~Train Summary {i+1} / {TRAIN_STEPS} - {i / TRAIN_STEPS * 100:.1f}% complete~~~\n"
+            print(f"~~~Train Summary {i + 1} / {TRAIN_STEPS} - {i / TRAIN_STEPS * 100:.1f}% complete~~~\n"
                   f"Current time step= {agent.c_time_step}\n"
                   f"Current avg. episodic reward= {avg_return}\n"
                   f"Avg episode length= {avg_len}\n"
                   f"Policy-loss= {policy_net_loss:.4f} Value-loss= {value_net_loss:.4f}\n"
                   f"~~~ END Summary~~~ ")
-
 
 
 def env_test(env_name: str) -> None:
