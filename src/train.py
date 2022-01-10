@@ -1,7 +1,7 @@
 import time, os
 from datetime import datetime
 import gym
-import pybulletgym # todo uncomment
+import pybulletgym
 from torch.utils.tensorboard import SummaryWriter
 
 from lib.PPO import PPO
@@ -38,7 +38,6 @@ def train():
     ctime = datetime.now()
     dt_string = "model_" + ctime.strftime("%d_%m_%y-%H_%M_%s")
     dt_string = os.path.join("res", "model", dt_string)
-    print(dt_string)
     agent = PPO(ENV_NAMES[ENV_IDX], model_save_dir=dt_string, surrogate_objective="clipped", render_env=RENDER_ENV)
 
     writer = SummaryWriter(log_dir=os.path.join("res/log_dir", dt_string))
