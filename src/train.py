@@ -1,7 +1,7 @@
 import time, os
 from datetime import datetime
 import gym
-# import pybulletgym # todo uncomment
+import pybulletgym # todo uncomment
 from torch.utils.tensorboard import SummaryWriter
 
 from lib.PPO import PPO
@@ -30,7 +30,7 @@ ENV_NAMES = ["AntPyBulletEnv-v0",  # 0
 SAVE_MODEL_FREQ = 100
 LOG_FREQ = 1
 TRAIN_STEPS = 800
-ENV_IDX = 16
+ENV_IDX = 0
 RENDER_ENV = False
 
 
