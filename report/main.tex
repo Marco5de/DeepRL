@@ -14,7 +14,7 @@ BCOR15mm               % Bindekorrektur
 \usepackage{blindtext}
 
 % für Texte in deutscher Sprache
-\usepackage[ngerman]{babel}
+\usepackage{babel}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 
@@ -25,9 +25,14 @@ BCOR15mm               % Bindekorrektur
 \usepackage{graphicx}
 
 % Literaturverzeichnis mit BibLKaTeX
-\usepackage[babel,german=quotes]{csquotes}
+%\usepackage[babel,german=quotes]{csquotes}
 \usepackage[backend=bibtex8]{biblatex}
 \bibliography{bibliography}
+
+\usepackage{todonotes}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
 
 % Für Tabellen mit fester Gesamtbreite und variabler Spaltenbreite
 \usepackage{tabularx} 
@@ -58,12 +63,11 @@ BCOR15mm               % Bindekorrektur
 % hier Namen etc. einsetzen
 \newcommand{\fullname}{Marco Deuscher}
 \newcommand{\email}{marco.deuscher@uni-ulm.de}
-\newcommand{\titel}{Deep Reinforcement Learning - Continuous Robotic Control}
+\newcommand{\titel}{DRL - Continuous Robotic Control}
 \newcommand{\jahr}{2022}
 \newcommand{\matnr}{766668}
-\newcommand{\gutachterA}{Prof.\,Dr.\,Daniel Braun}
-\newcommand{\gutachterB}{Prof.\,Dr.\,Un Leserlich}
-\newcommand{\betreuer}{Betreuername}
+\newcommand{\gutachter}{Prof.\,Dr.\,Daniel Braun}
+\newcommand{\betreuer}{Heinke Hihn M. Sc.}
 
 % hier die Fakultät auswählen
 %\newcommand{\fakultaet}{---  Im Quellcode anpassen nicht vergessen! ---}
@@ -84,6 +88,7 @@ BCOR15mm               % Bindekorrektur
 }
 
 \usepackage{hyperref}
+\usepackage{amsfonts}
 \hypersetup{
 pdftitle=\titel,
 pdfauthor=\fullname,
@@ -120,7 +125,7 @@ pdfborder=0 0 0	% keine Box um die Links!
 {\footnotesize \bfseries Vorgelegt von:}\\
 {\footnotesize \fullname\\ \email}\\ \matnr\\[2em]
 {\footnotesize \bfseries Gutachter:}\\                     
-{\footnotesize \gutachterA\\ \gutachterB}\\[2em]
+{\footnotesize \gutachter\\}\\[2em]
 {\footnotesize \bfseries Betreuer:}\\ 
 {\footnotesize \betreuer}\\\\
 {\footnotesize \jahr}
@@ -143,10 +148,18 @@ pdfborder=0 0 0	% keine Box um die Links!
 % ab hier Zeilenabstand etwas größer 
 \setstretch{1.2}
 
+\input{chapters/Abstract.tex}
+
 \tableofcontents
 
 \mainmatter
-\input{chapters/einleitung}
+
+\input{chapters/Introduction.tex}
+\input{chapters/Methods.tex}
+\input{chapters/Experiments.tex}
+\input{chapters/Discussion.tex}
+\input{chapters/Conclusion.tex}
+%\input{chapters/einleitung}
 % hier weitere Kapitel einbinden
 
 \appendix
