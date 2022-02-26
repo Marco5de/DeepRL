@@ -67,6 +67,27 @@ The following lists the hyperparameters for the environments that were considere
 | `numeric_stable` | 1e-10 | |
 | `base_lr` | 3e-4 | |
 
+## Logging with Tensorboard
+The implementation is using tensorboard to log the loss function values of the policy and value function network.
+Additionally, the processing time, average episode length and average episodic reward are all logged.
+The default output location is `src/res/log_dir`.
+To visualize the data in tensorboard simply start a server with the log directory
+```
+tensorboard --port 6006 --logdir srd/res/log_dir
+```
+
+## Saved models
+The default path for model is `src/res/model` each model consists of the two MLP checkpoints `policy_net.pth` and `value_net.pth`
+respectively which are simply saved and loaded using the PyTorch library.
+Additionally, the normalization of the environment must be preserved which is why a `vec_normalize.pkl` is also present.
+To save and load a model simply use the functionality provided in the `PPO.py` class: `load_model()`, `save_model()`.
+
+## Compile report from LaTeX
+The report including all resources can be found in the `report` directory.
+The LaTeX code is compiled using `latexmk`, thus it is assumed that it is installed alongside all required LaTeX packages.
+All of them should be contained in a full `texlive` installation.
+The easiest way to build the report is using the provided `Makefile`.
+To clean up the generated build files use `make clean`.
 
 
 TODO - for eval remove sampling!
