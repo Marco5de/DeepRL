@@ -4,10 +4,12 @@
 First, clone the repo
 ```
 git clone https://github.com/Marco5de/DeepRL.git
+cd DeepRL
 ```
 I recommend installing all of the required modules in a fresh virtualenv.
 ```
 virtualenv venv
+source venv/bin/activate
 ```
 then install most of the required modules directly using pip
 ```
@@ -16,16 +18,18 @@ pip install -r requirements.txt
 install all of the external dependencies beginning with openAI gym
 ```
 cd src
-mkdir extern
+mkdir extern && cd extern
 git clone https://github.com/openai/gym.git
 cd gym
 pip install -e .
+cd ..
 ```
 and pybullet-gym
 ```
 git clone https://github.com/benelot/pybullet-gym.git
 cd pybullet-gym
 pip install -e .
+cd ../../../
 ```
 with that the installation of all required modules is complete.  
 Now to run a training run the `train.py` script which in turn is using the small lib implementing the PPO algorithm.
@@ -39,7 +43,7 @@ The following contains a brief description for each of the available settings
 * `SAVE_MODEL_FREQ`: model is saved every `SAVE_MODEL_FREQ`
 * `LOG_FREQ`: log to stdout every `LOG_FREQ` iterations, note that no logging lib is used but simple print output
 * `TRAIN_STEPS`: total number of training iterations, note that this does not directly correspond to the number of training steps
-often found in literature as each train_step corresponds to a total of `N * T` timesteps
+often found in literature as each train_step corresponds to a total of `N * T` timesteps but also may depend on the environment sequence length 
 * `ENV_IDX`: Specifies which environment is used, see `ENV_NAMES` for an enumeration of the respective environments 
 * `RENDER_ENV`: Specifies if the environment is rendered during training, note that the pybulletgym rendering works different from 
 the openai-gym rendering as the `env.render()` function must only be called once!
