@@ -1,6 +1,10 @@
 # Deep Reinforcement Learning Project - Winterterm 21/22
 
 ## How to run the code?
+First, clone the repo
+```
+git clone https://github.com/Marco5de/DeepRL.git
+```
 I recommend installing all of the required modules in a fresh virtualenv.
 ```
 virtualenv venv
