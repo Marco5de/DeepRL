@@ -1,15 +1,52 @@
 \chapter{Discussion}\label{ch:discussion}
-The primary goal of this work was to replicate the results achieved by the original PPO authors.
-Thus, in the following I firstly discuss to what extent I was successful in reproducing the results.
-Afterwards, I discuss the topic of reproducibility in science in general, and my experience in replicating the results
+The primary goal of this work is to replicate the results achieved by the original PPO authors.
+Thus, in Section~\ref{sec:disc_results} I discuss to what extent I was successful in reproducing the results.
+In Section~\ref{sec:disc_repro}, I discuss the topic of reproducibility in science in general, and my experience in replicating the results.
 
-\section{Results}\label{sec:disc_results} %todo: besseren titel
+
+\section{Results}\label{sec:disc_results}
+The Pendulum-v0 environment is one of the easier environments due to its low dimensionality.
+The environment is considered solved at a score of around $-140$ based on current leader boards.
+Thus, to solve the environment the achieved score should either be close to $-140$ or above~\cite{Oller2020}.
+The original PPO algorithm was not evaluated on this environment.
+I demonstrate that the algorithm is able to solve this simple environment as my implementation was able to achieve
+an average episodic return of $-175$.
+This is close enough to a score of $-140$ to consider this environment solved by the algorithm.
+
+The AntPyBulletEnv-v0 environment is significantly more complex than the Pendulum-v0 due to its higher dimensionality.
+The AntPyBulletEnv-v0 was not considered in the original PPO paper.
+Further, a direct comparison with the original PPO paper is difficult as they did not report absolute values but instead a score in
+$[0, 1]$ where $0$ is the average episodic return of a random policy and $1$ the result of the best algorithm~\cite{schulman2017ppo}.
+This comparison is of interest when comparing different algorithms to each other which is not the case in this replication study.
+Thus, in the following I compare my results against the results reported in~\cite{Raffin2020}.
+They reported a total average episodic return of 2160 for the PPO algorithm on the AntPyBulletEnv-v0 environment.
+In comparison, the best reported algorithm, including their presented smooth exploration, is SAC gSDE and achieved a return of $3450$.
+The PPO gSDE algorithm improved the vanilla algorithm to a return of $2587$~\cite{Raffin2020}.
+As mentioned in Section~\ref{subsec:antpybulletenv-v0} I was unable to reproduce the results during evaluation.
+However, a score around of $1250$ would be expected.
+This is significantly lower than their reported return.
+I identified several differences between my implementation and theirs.
+Firstly, I was unable to use the same hyperparameter presented in~\cite{Raffin2020} as they lead to poor performance with
+my implementation.
+Due to limited resources my hyperparameters are most likely not optimal.
+Further hyperparameter tuning may increase the performance by a small amount.
+The original algorithm applied $\operatorname{Tanh}(\cdot)$ activations in both MLPs, I replaced them by
+$\operatorname{ReLU}(\cdot)$ activations as they achieved better results in my experiments.
+Lastly, my implementation of the PPO algorithm is basic and does not make use of more complex implementation details.
+To name a couple of examples, I do not consider an entropy term in the loss function,
+I use separate loss functions for each of the networks, and the exploration, specified by the variance in the covariance matrix,
+is fixed during training.
+
+Future work includes the implementation of the above mentioned more complex implementation details.
+Apart from improving the implementation of the algorithm, many extensions have been suggested in the past years.
+One such extension in regard to exploration is presented in~\cite{Raffin2020}.
+Thus, the algorithm may be adapted to include current state-of-the-art approaches.
 
 
 \section{Reproducibility in Science}\label{sec:disc_repro}
 In science almost all work is related to previous publications either by improving established work
-or comparing novel methods to the current state of the art.
-Thus, in order to compare your own results to the existing publications' reproducibility is extremely important.
+or comparing novel methods to the current state-of-the-art.
+Thus, in order to compare your own results to the existing publications, reproducibility is extremely important.
 In the context of machine learning and reinforcement learning this means that an author can validate the results of
 others by running the experiments on their own machine.
 However, not all authors publish their implementation which requires re-implementing their work based on the provided paper.
@@ -20,26 +57,26 @@ One such platform is \textit{paperswithcode}\footnote{\url{https://paperswithcod
 grouping publications based on the task or dataset and offering links to available implementations.
 This demonstrates some difficulties in regard to reproducibility in the field of machine learning.
 Reinforcement learning introduces additional challenges as the entire framework presented in Section~\ref{sec:reinforcement-learning-basics}
-is intrinsically based on statistics which further makes replicating exact results difficult.\\ % todo: hier vllt ausführlicher und besserausformulieren
+is intrinsically based on statistics which further makes replicating exact results difficult.\\
 
-In the following I'd like to discuss my personal experience reproducing the results of the PPO algorithm.
+In the following I would like to discuss my personal experience reproducing the results of the PPO algorithm.
 Previous to this project I had no practical experience in the field of reinforcement learning except a brief introduction in a single lecture.
 So the beginning included a lot of learning about the basics of reinforcement learning, common conventions and an overview of the field.
-Starting with the environments I found it relatively easy to setup (..) compatible with the existing work . %todo formulierung grausig
-Something I struggled with especially at the beginning of the implementation was the transfer from the formulas given in
-the paper to an actual implementation, e.g.\ replacing expectations by their empirical, sampled-based estimator.
+Starting with the tasks I found it relatively easy to set up an environment compatible with existing work.
+Something I struggled with, especially at the beginning of the implementation, was the transfer from the formulas given in
+the paper to an actual implementation, e.g.\ replacing expectations by their empirical, sample-based estimator.
 The PPO paper is vague regarding the modeling of the policy and value function.
-The original paper suggests the actor-critic method, it is however unclear if it is implemented as separated networks
+The original paper suggests the actor-critic method, it is however unclear if it is implemented as separate networks
 or with parameter sharing.
 Available implementations also vary widely in this point.
-Once I had a working implementation, I had some problems with hyperparameters.
+Once I had a working implementation, I identified some problems with hyperparameters.
 To achieve optimal performance I tried to use the same hyperparameters as available implementations but depending on the
-implementation they change their name and also their definition which makes it difficult to copy the hyperparameters
-when one is not intimately familiar with the common conventions.\\
+implementation they change the name of the parameters and also their definition.
+This makes it difficult to copy the hyperparameters without being familiar with the respective implementation.\\
 Even though I had no previous experience with reinforcement learning, I have some experience in Deep Learning
 regarding reproducibility from my bachelor thesis and various projects at Team Spatzenhirn.
 For me, it was significantly more difficult reproducing the results of the PPO algorithm compared to previous projects
-I worked on such as monocular depth estimation or depth estimation.
+I worked on, e.g. monocular depth estimation or object detection.
 Something I noticed is that especially when transferring to a new dataset / environment the reinforcement learning
 models are incredibly sensitive w.r.t.\ their hyperparameters.
-I imagine that this makes it difficult to transfer a model from one of the popular dataset to an actual application. % todo dieses Ende mit bezug auf meine bisherige Erfahrung besser ausformulieren!
+I imagine that this makes it difficult to transfer a model from one of the popular dataset to an actual application.

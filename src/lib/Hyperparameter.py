@@ -23,7 +23,7 @@ class Hyperparameter:
         self.d_target_ratio = 1.5
         self.d_target = 0.25
         self.var = 0.1  # try different variance!
-        self.N = 2038 * 8  # nsteps #todo: ist das mult mit n_env sinnvoll?
+        self.N = 256 * 8  # nsteps
         self.T = 32  # minibatches / max steps per episode
         self.K = 10  # noptepochs
         self.numeric_stable = 1e-10

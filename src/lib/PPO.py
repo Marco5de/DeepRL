@@ -72,6 +72,7 @@ class PPO(nn.Module):
 
         print(f"Action space limits (low, high)= {self.action_space_lim}\nState space limits (low, high)= "
               f"{self.state_space_lim}")
+        print(f"Action space dim= {self.action_space_dim} State space dim= {self.state_space_dim}")
 
         self.env = DummyVecEnv([lambda: gym.make(gym_name)])
         # norm both seems to perform best
@@ -365,6 +366,7 @@ class PPO(nn.Module):
                 t += 1
 
             episode_lengths.append(t)
+            print(episode_lengths)
 
         # training will be resumed and for that normalization is expected
         self.env.training = True

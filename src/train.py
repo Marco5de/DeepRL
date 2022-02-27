@@ -22,14 +22,14 @@ ENV_NAMES = ["AntPyBulletEnv-v0",  # 0
 
              # Mujoco Envs
              "InvertedPendulumMuJoCoEnv-v0",  # 13
-             "ReacherMuJoCoEnv-v0",  # 14
+             "ReacherMuJoCoEnv-v0",  # 16
              "AntMuJoCoEnv-v0",  # 15
              "Pendulum-v0",  # 16
              ]
 
-SAVE_MODEL_FREQ = 100
+SAVE_MODEL_FREQ = 2
 LOG_FREQ = 1
-TRAIN_STEPS = 800
+TRAIN_STEPS = 500
 ENV_IDX = 0
 RENDER_ENV = False
 
@@ -62,26 +62,12 @@ def train():
                   f"Current time step= {agent.c_time_step}\n"
                   f"Current avg. episodic reward= {avg_return}\n"
                   f"Avg episode length= {avg_len}\n"
+                  f"Normalized return= {avg_return / avg_len}\n"
                   f"Policy-loss= {policy_net_loss:.4f} Value-loss= {value_net_loss:.4f}\n"
                   f"~~~ END Summary~~~ ")
 
 
-def env_test(env_name: str) -> None:
-    env = gym.make(env_name)
-    env.render()
-    print(f"Env.action_space: {env.action_space} Env.observation_space: {env.observation_space}\n")
-    for i_episode in range(1):
-        observation = env.reset()
-        for t in range(100):
-            action = env.action_space.sample()
-            observation, reward, done, info = env.step(action)
-            print(f"~~~\nObs: {observation}\nReward: {reward}\nDone: {done}\nInfo: {info}\nAction: {action}\n~~~\n")
-            if done:
-                print("Episode finished after {} timesteps".format(t + 1))
-                break
-            time.sleep(0.1)
-    env.close()
-
 
 if __name__ == "__main__":
     train()
+

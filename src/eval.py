@@ -5,9 +5,9 @@ from src.lib.PPO import PPO
 from src.train import ENV_NAMES
 
 RENDER_ENV = False
-MODEL_DIR_PATH = "res/model/model_06_01_22-17_53_1641488026"
-NUM_EPISODES = 100
-ENV_IDX = 4
+MODEL_DIR_PATH = ""
+NUM_EPISODES = 1
+ENV_IDX = 0
 
 def eval():
     ctime = datetime.now()

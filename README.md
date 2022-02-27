@@ -55,17 +55,17 @@ The following lists the hyperparameters for the environments that were considere
 
 | Hyperparameter   | Pendulum-v0             | AntPyBulletEnv-v0    
 |---------|----------------------|--------------|
-| `epsilon_clip` |  0.2      |     |
-| `gamma` | 0.99 | |
-| `beta` | 1.0 | |
-| `d_target_ratio` | 1.5 | |
-| `d_target` | 0.25 | |
-| `var` | 0.5 | |
-| `N` | 2048 | |
-| `T` | 200 | |
-| `K` | 10 | |
-| `numeric_stable` | 1e-10 | |
-| `base_lr` | 3e-4 | |
+| `epsilon_clip` |  0.2      |    0.2 |
+| `gamma` | 0.99 | 0.99 |
+| `beta` | 1.0 | 1.0 |
+| `d_target_ratio` | 1.5 | 1.5 |
+| `d_target` | 0.25 | 0.25 |
+| `var` | 0.5 |  0.1|
+| `N` | 2048 | 2048 |
+| `T` | 200 | 32 |
+| `K` | 10 | 10 |
+| `numeric_stable` | 1e-10 | 1e-10|
+| `base_lr` | 3e-4 | 2.5e-4|
 
 ## Logging with Tensorboard
 The implementation is using tensorboard to log the loss function values of the policy and value function network.
@@ -88,51 +88,3 @@ The LaTeX code is compiled using `latexmk`, thus it is assumed that it is instal
 All of them should be contained in a full `texlive` installation.
 The easiest way to build the report is using the provided `Makefile`.
 To clean up the generated build files use `make clean`.
-
-
-TODO - for eval remove sampling!
-
-## Ant
-
-Best run so far - Run 3
-
-### Run1
-self.epsilon_clip = 0.2  # cliprange
-self.gamma = 0.99
-self.var = 0.25  # try different variance!
-self.N = 256 * 8  # nsteps #todo: ist das mult mit n_env sinnvoll?
-self.T = 32   # minibatches / max steps per episode
-self.K = 10  # noptepochs
-self.base_lr = 2.5e-4
-
-results:
-around 1 mio: 35-37
-End: no significant improvement
-
-### Run2
-self.epsilon_clip = 0.2  # cliprange
-self.gamma = 0.99
-self.var = 0.5  # try different variance!
-self.N = 256 * 8  # nsteps #todo: ist das mult mit n_env sinnvoll?
-self.T = 32   # minibatches / max steps per episode
-self.K = 10  # noptepochs
-self.base_lr = 2.5e-4
-
-results:
-around 1 mio: 30-33 
-End:
-
-### Run3
-self.epsilon_clip = 0.2  # cliprange
-self.gamma = 0.99
-self.var = 0.1  # try different variance!
-self.N = 256 * 8  # nsteps #todo: ist das mult mit n_env sinnvoll?
-self.T = 32   # minibatches / max steps per episode
-self.K = 10  # noptepochs
-self.base_lr = 2.5e-4
-
-results:
-around 1 mio: 37.5-40 (1.17 - 1.25)
-End:
-
-
