@@ -1,0 +1,45 @@
+\chapter{Discussion}\label{ch:discussion}
+The primary goal of this work was to replicate the results achieved by the original PPO authors.
+Thus, in the following I firstly discuss to what extent I was successful in reproducing the results.
+Afterwards, I discuss the topic of reproducibility in science in general, and my experience in replicating the results
+
+\section{Results}\label{sec:disc_results} %todo: besseren titel
+
+
+\section{Reproducibility in Science}\label{sec:disc_repro}
+In science almost all work is related to previous publications either by improving established work
+or comparing novel methods to the current state of the art.
+Thus, in order to compare your own results to the existing publications' reproducibility is extremely important.
+In the context of machine learning and reinforcement learning this means that an author can validate the results of
+others by running the experiments on their own machine.
+However, not all authors publish their implementation which requires re-implementing their work based on the provided paper.
+Many papers are relatively vague regarding implementation details and are missing vital information.
+Thus, replicating results solely based on the paper is often difficult.
+There are platforms helping with this problem.
+One such platform is \textit{paperswithcode}\footnote{\url{https://paperswithcode.com/}}
+grouping publications based on the task or dataset and offering links to available implementations.
+This demonstrates some difficulties in regard to reproducibility in the field of machine learning.
+Reinforcement learning introduces additional challenges as the entire framework presented in Section~\ref{sec:reinforcement-learning-basics}
+is intrinsically based on statistics which further makes replicating exact results difficult.\\ % todo: hier vllt ausführlicher und besserausformulieren
+
+In the following I'd like to discuss my personal experience reproducing the results of the PPO algorithm.
+Previous to this project I had no practical experience in the field of reinforcement learning except a brief introduction in a single lecture.
+So the beginning included a lot of learning about the basics of reinforcement learning, common conventions and an overview of the field.
+Starting with the environments I found it relatively easy to setup (..) compatible with the existing work . %todo formulierung grausig
+Something I struggled with especially at the beginning of the implementation was the transfer from the formulas given in
+the paper to an actual implementation, e.g.\ replacing expectations by their empirical, sampled-based estimator.
+The PPO paper is vague regarding the modeling of the policy and value function.
+The original paper suggests the actor-critic method, it is however unclear if it is implemented as separated networks
+or with parameter sharing.
+Available implementations also vary widely in this point.
+Once I had a working implementation, I had some problems with hyperparameters.
+To achieve optimal performance I tried to use the same hyperparameters as available implementations but depending on the
+implementation they change their name and also their definition which makes it difficult to copy the hyperparameters
+when one is not intimately familiar with the common conventions.\\
+Even though I had no previous experience with reinforcement learning, I have some experience in Deep Learning
+regarding reproducibility from my bachelor thesis and various projects at Team Spatzenhirn.
+For me, it was significantly more difficult reproducing the results of the PPO algorithm compared to previous projects
+I worked on such as monocular depth estimation or depth estimation.
+Something I noticed is that especially when transferring to a new dataset / environment the reinforcement learning
+models are incredibly sensitive w.r.t.\ their hyperparameters.
+I imagine that this makes it difficult to transfer a model from one of the popular dataset to an actual application. % todo dieses Ende mit bezug auf meine bisherige Erfahrung besser ausformulieren!

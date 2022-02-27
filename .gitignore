@@ -5,8 +5,3 @@ extern/
 res/model
 res/log_dir
 res/tb_data
-src/compare.py
-
-
-
-report/**

@@ -1,0 +1,45 @@
+\chapter{Experiments and Evaluation}\label{ch:experiments-and-evaluation}
+In this chapter the experimental procedure is described in detail, and the evaluation
+including the quantitative results are presented.
+
+
+\section{Experimental Setup}\label{sec:experimental-setup}
+I implemented the PPO algorithm in Python using PyTorch for the implementation of the
+neural networks and the optimization~\cite{NEURIPS2019_9015}.
+For the environments I used the openAI gym in combination with PyBulletEnv for an open-source implementation of the simulation
+for the robotic environments~\cite{brockman2016openai,benelot2018}.
+Further, I employed Stablebaselines3 for the normalization of the environment~\cite{stable-baselines3}.
+In particular, I normalized both the state space and rewards.
+The two considered environments are the Ant and Swing-up pendulum. % todo schauen welche da tatsächlich in die Auswertung kommmen
+The training was conducted on an AMD Ryzen 2700X CPU for a total of X training steps. % todo: genaue Zahl einfügen
+Requiring a total time of Y minutes. % todo: zeit einfügen!
+The policy and value function are modeled by separate neural networks respectively.
+The architecture is presented in Section~\ref{sec:proximal-policy-optimization}.
+Table~\ref{tab:hyp} shows the hyperparameters.
+\begin{table}[h]
+    \centering
+    \begin{tabular}{c|c}
+        \toprule
+        Hyperparameter & Value \\
+        \midrule
+        $\varepsilon$-clip & 0.2\\
+        $\gamma$ & 0.99\\
+        $\sigma$ & 0.5\\
+        $N$ & 2048\\
+        $T$ & 200\\
+        $K$ & 10\\
+        numeric stability & $1\cdot 10^{-10}$\\
+        learning rate & $2\cdot 10^{-4}$\\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameters used during training.}
+    \label{tab:hyp}
+\end{table}
+The naming is in accordance with Algorithm~\ref{alg:ppo}.
+Additionally, $\sigma$ refers to the variance used to initialize the covariance matrix used in the multivariate gaussian
+to sample an action from the mean-value provided by the policy network.
+To ensure numeric stability when normalizing the advantage function estimates the above shown hyperparameter is added
+during normalization.
+The learning rate is used for both the value function and policy network.
+
+\section{Evaluation}\label{sec:evaluation}
