@@ -5,7 +5,7 @@ import torch.distributions
 
 class PolicyNetwork(nn.Module):
     """
-    Implements the network that is used to model a general statistical policy
+    Implements the network that is used to model a general stochastic policy
     """
 
     def __init__(self, input_dim: int, output_dim: int, hidden_layer_widths: list = [64, 64],
@@ -36,7 +36,7 @@ class PolicyNetwork(nn.Module):
         Implements the forward pass of the policy network
 
         :param t: input tensor
-        :param return_distribution if true the multivariate gaussian is also returned (see VF eval)
+        :param return_mean if true only the mean without sampling is returned
         :return: output sampled from the distribution outputted by the NN
         """
         t = self.activation(self.input(t))
@@ -46,7 +46,7 @@ class PolicyNetwork(nn.Module):
         if return_mean:
             return t
 
-            # t are now the mean parameters, use that to create a multivariate gaussian to be sampled
+        # t are now the mean parameters, use that to create a multivariate gaussian to be sampled
         distribution = torch.distributions.MultivariateNormal(t, self.covariance_mat)
         sample = distribution.sample()
         # get log prob for the sample, detach as graph is not required!
@@ -93,9 +93,19 @@ class ValueFunctionNetwork(nn.Module):
 
 
 class ActorCriticNetwork(nn.Module):
+    """
+    Implements network employs parameter sharing between the actor and the critic
+    """
 
     def __init__(self, input_dim: int, output_dim: int, hidden_layer_widths: list = [64, 64],
                  covariance_mat: torch.Tensor = None):
+        """
+        Ctor
+        :param input_dim: dimension of the state space
+        :param output_dim: dimension of the action space
+        :param hidden_layer_widths: witdth of the hidden layers, length must be 2
+        :param covariance_mat: initialized cov-mat
+        """
         super().__init__()
 
         assert len(hidden_layer_widths) == 2
@@ -116,6 +126,11 @@ class ActorCriticNetwork(nn.Module):
         self.distribution = None
 
     def eval_policy(self, obs: torch.Tensor):
+        """
+        Evaluates the policy by infering the policy head and sampling from the multivariate gaussian distribution
+        :param obs: state space observation
+        :return: sampled action and log probabilities
+        """
         mean = self.policy_head(self.common_base(obs))
 
         # t are now the mean parameters, use that to create a multivariate gaussian to be sampled
@@ -128,10 +143,15 @@ class ActorCriticNetwork(nn.Module):
         return sample, log_prob
 
     def eval_value(self, obs: torch.Tensor):
+        """
+        Evalutes value function head
+        :param obs: state space observation
+        :return: value function result
+        """
         return self.value_head(self.common_base(obs))
 
 
-def test_ANN():
+def __test_ANN():
     # Make sure that conv-mat is float
     cov_mat = torch.tensor([[1.0, 0, 0],
                             [0, 1.0, 0],
@@ -159,4 +179,4 @@ def test_ANN():
 
 
 if __name__ == "__main__":
-    test_ANN()
+    __test_ANN()

@@ -26,7 +26,7 @@ class RolloutBuffer:
         self.unnormed_rewards = []
         self.episode_length = []
 
-    def to_tensor(self):
+    def to_tensor(self) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Conversion from python lists to torch.Tensor
 
@@ -46,9 +46,17 @@ class PPO(nn.Module):
     _valid_surrogate_objectives = ["clipped", "adaptive_KL", "policy_gradient"]
 
     def __init__(self, gym_name: str, model_save_dir: str, surrogate_objective: str, render_env: bool):
+        """
+        Ctor
+        :param gym_name: name of the environment in ENV_NAMES
+        :param model_save_dir:
+        :param surrogate_objective: surrogate function in _valid_surrogate_objectives
+        :param render_env: bool whether to render environment during training
+        """
         super().__init__()
         assert surrogate_objective in self._valid_surrogate_objectives, "Specified surrogate objective is not valid!"
         self.env = gym.make(gym_name)
+        # ensure compatibility with both pybullet-gym and openai-gym
         try:
             self.state_space_dim = len(self.env.robot.observation_space.high)
             self.action_space_dim = len(self.env.robot.action_space.high)
@@ -86,7 +94,6 @@ class PPO(nn.Module):
         # covariance chosen the same for all dimension (assuming that the action space is normed!
         self.cov_mat = torch.diag(torch.tensor([self.hyperparameter.var] * self.action_space_dim))
 
-        # todo: testing relu usage instead of tanh
         self.policy_network = PolicyNetwork(input_dim=self.state_space_dim,
                                             output_dim=self.action_space_dim,
                                             covariance_mat=self.cov_mat,
@@ -150,8 +157,6 @@ class PPO(nn.Module):
             policy_net_loss.backward(retain_graph=True)
             self.policy_network_optimizer.step()
 
-            # todo: MSE loss oder huber loss?
-            # value_function_net_loss = nn.MSELoss()(value.squeeze(), rewards_togo)
             value_function_net_loss = nn.HuberLoss()(value.squeeze(), rewards_togo)
             self.value_func_network_optimizer.zero_grad()
             value_function_net_loss.backward()
@@ -284,7 +289,6 @@ class PPO(nn.Module):
     def adaptive_KL_surrogate_function(self, old: torch.Tensor, new: torch.Tensor,
                                        advantage_values: torch.Tensor, clip: bool = True) -> torch.Tensor:
         """
-        todo: yet to be tested
         :param clip specifies whether the clipping method (see paper and clipped surrogate function) is applied
         :return:
         """

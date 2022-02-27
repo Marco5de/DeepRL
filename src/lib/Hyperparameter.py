@@ -9,24 +9,38 @@ ENV_TO_KEY = {
 
 
 class Hyperparameter:
+    """
+    Class managing the hyperparameter
+    """
+
     def __init__(self):
-        # https://github.com/araffin/rl-baselines-zoo/blob/master/hyperparams/ppo2.yml
+        """
+        Default initialize all required hyperparameters
+        """
         self.epsilon_clip = 0.2  # cliprange
         self.gamma = 0.99
         self.beta = 1.0
         self.d_target_ratio = 1.5
-        self.d_target = 0.1
-        self.var = 0.5  # try different variance!
-        self.N = 2048  # nsteps
-        self.T = 200   # minibatches / max steps per episode
+        self.d_target = 0.25
+        self.var = 0.1  # try different variance!
+        self.N = 2038 * 8  # nsteps #todo: ist das mult mit n_env sinnvoll?
+        self.T = 32  # minibatches / max steps per episode
         self.K = 10  # noptepochs
         self.numeric_stable = 1e-10
-        self.base_lr = 3e-4
+        self.base_lr = 2.5e-4
 
         # todo: ich verwende die HP anders!
         self.N = self.N // self.T
 
     def read_yaml(self, env_name):
+        """
+        Read hyperparameters from yaml file
+        See https://github.com/araffin/rl-baselines-zoo/blob/master/hyperparams/ppo2.yml for format reference
+        Note not all possible hyperparameter all implemented
+        todo: currently unused
+        :param env_name: environment name in global ENV_NAMES, converted to expected key
+        :return: None, modifies class members
+        """
         with open("res/hyperparameter.yaml") as f:
             self.hp_dict = yaml.safe_load(f)
 
